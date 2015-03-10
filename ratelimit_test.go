@@ -245,7 +245,7 @@ func (rateLimitSuite) TestTakeAvailable(c *gc.C) {
 	for i, test := range takeAvailableTests {
 		tb := NewBucket(test.fillInterval, test.capacity)
 		for j, req := range test.reqs {
-			d := tb.takeAvailable(tb.startTime.Add(req.time), req.count)
+			d, _ := tb.takeAvailable(tb.startTime.Add(req.time), req.count)
 			if d != req.expect {
 				c.Fatalf("test %d.%d, %s, got %v want %v", i, j, test.about, d, req.expect)
 			}

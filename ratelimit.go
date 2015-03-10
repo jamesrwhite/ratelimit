@@ -145,28 +145,28 @@ func (tb *Bucket) TakeMaxDuration(count int64, maxWait time.Duration) (time.Dura
 // TakeAvailable takes up to count immediately available tokens from the
 // bucket. It returns the number of tokens removed, or zero if there are
 // no available tokens. It does not block.
-func (tb *Bucket) TakeAvailable(count int64) int64 {
+func (tb *Bucket) TakeAvailable(count int64) (int64, int64) {
 	return tb.takeAvailable(time.Now(), count)
 }
 
 // takeAvailable is the internal version of TakeAvailable - it takes the
 // current time as an argument to enable easy testing.
-func (tb *Bucket) takeAvailable(now time.Time, count int64) int64 {
+func (tb *Bucket) takeAvailable(now time.Time, count int64) (int64, int64) {
 	if count <= 0 {
-		return 0
+		return 0, 0
 	}
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
 
 	tb.adjust(now)
 	if tb.avail <= 0 {
-		return 0
+		return 0, 0
 	}
 	if count > tb.avail {
 		count = tb.avail
 	}
 	tb.avail -= count
-	return count
+	return count, tb.avail
 }
 
 // Rate returns the fill rate of the bucket, in tokens per second.

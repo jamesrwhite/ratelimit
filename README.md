@@ -81,10 +81,10 @@ the bucket once this method commits us to taking them.
 #### func (*Bucket) TakeAvailable
 
 ```go
-func (tb *Bucket) TakeAvailable(count int64) int64
+func (tb *Bucket) TakeAvailable(count int64) (int64, int64)
 ```
 TakeAvailable takes up to count immediately available tokens from the bucket. It
-returns the number of tokens removed, or zero if there are no available tokens.
+returns the number of tokens removed and how many remain, or zero if there are no available tokens.
 It does not block.
 
 #### func (*Bucket) TakeMaxDuration
