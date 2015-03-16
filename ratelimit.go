@@ -174,6 +174,25 @@ func (tb *Bucket) Rate() float64 {
 	return 1e9 * float64(tb.quantum) / float64(tb.fillInterval)
 }
 
+// Returns the capacity of the bucket
+func (tb *Bucket) Capacity() int64 {
+	return tb.capacity
+}
+
+// Returns how many tokens are available in the bucket
+func (tb *Bucket) Available() int64 {
+	if (tb.avail < 0) {
+		return 0
+	}
+
+	return tb.avail
+}
+
+// Returns how many tokens have been used in the current period
+func (tb *Bucket) Used() int64 {
+	return tb.capacity - tb.Available()
+}
+
 // take is the internal version of Take - it takes the current time as
 // an argument to enable easy testing.
 func (tb *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.Duration, bool) {
