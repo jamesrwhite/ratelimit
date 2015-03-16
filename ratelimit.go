@@ -149,24 +149,20 @@ func (tb *Bucket) TakeAvailable(count int64) (int64, int64) {
 	return tb.takeAvailable(time.Now(), count)
 }
 
-// takeAvailable is the internal version of TakeAvailable - it takes the
-// current time as an argument to enable easy testing.
-func (tb *Bucket) takeAvailable(now time.Time, count int64) (int64, int64) {
-	if count <= 0 {
-		return 0, 0
-	}
-	tb.mu.Lock()
-	defer tb.mu.Unlock()
+// adjust adjusts the current bucket capacity based on the current time.
+// It returns the current tick.
+func (tb *Bucket) Adjust(now time.Time) (currentTick int64) {
+	currentTick = int64(now.Sub(tb.startTime) / tb.fillInterval)
 
-	tb.adjust(now)
-	if tb.avail <= 0 {
-		return 0, 0
+	if tb.avail >= tb.capacity {
+		return
 	}
-	if count > tb.avail {
-		count = tb.avail
+	tb.avail += (currentTick - tb.availTick) * tb.quantum
+	if tb.avail > tb.capacity {
+		tb.avail = tb.capacity
 	}
-	tb.avail -= count
-	return count, tb.avail
+	tb.availTick = currentTick
+	return
 }
 
 // Rate returns the fill rate of the bucket, in tokens per second.
@@ -193,6 +189,26 @@ func (tb *Bucket) Used() int64 {
 	return tb.capacity - tb.Available()
 }
 
+// takeAvailable is the internal version of TakeAvailable - it takes the
+// current time as an argument to enable easy testing.
+func (tb *Bucket) takeAvailable(now time.Time, count int64) (int64, int64) {
+	if count <= 0 {
+		return 0, 0
+	}
+	tb.mu.Lock()
+	defer tb.mu.Unlock()
+
+	tb.Adjust(now)
+	if tb.avail <= 0 {
+		return 0, 0
+	}
+	if count > tb.avail {
+		count = tb.avail
+	}
+	tb.avail -= count
+	return count, tb.avail
+}
+
 // take is the internal version of Take - it takes the current time as
 // an argument to enable easy testing.
 func (tb *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.Duration, bool) {
@@ -202,7 +218,7 @@ func (tb *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
 
-	currentTick := tb.adjust(now)
+	currentTick := tb.Adjust(now)
 	avail := tb.avail - count
 	if avail >= 0 {
 		tb.avail = avail
@@ -219,22 +235,6 @@ func (tb *Bucket) take(now time.Time, count int64, maxWait time.Duration) (time.
 	}
 	tb.avail = avail
 	return waitTime, true
-}
-
-// adjust adjusts the current bucket capacity based on the current time.
-// It returns the current tick.
-func (tb *Bucket) adjust(now time.Time) (currentTick int64) {
-	currentTick = int64(now.Sub(tb.startTime) / tb.fillInterval)
-
-	if tb.avail >= tb.capacity {
-		return
-	}
-	tb.avail += (currentTick - tb.availTick) * tb.quantum
-	if tb.avail > tb.capacity {
-		tb.avail = tb.capacity
-	}
-	tb.availTick = currentTick
-	return
 }
 
 func abs(f float64) float64 {
