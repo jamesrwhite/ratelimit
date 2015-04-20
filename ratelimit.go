@@ -149,6 +149,18 @@ func (tb *Bucket) TakeAvailable(count int64) (int64, int64) {
 	return tb.takeAvailable(time.Now(), count)
 }
 
+// Set the amount of tokens in the bucket
+func (tb *Bucket) SetAvailable(amount int64) (int64) {
+	now := time.Now()
+
+	tb.mu.Lock()
+	defer tb.mu.Unlock()
+
+	tb.Adjust(now)
+	tb.avail = amount
+	return tb.avail
+}
+
 // adjust adjusts the current bucket capacity based on the current time.
 // It returns the current tick.
 func (tb *Bucket) Adjust(now time.Time) (currentTick int64) {
